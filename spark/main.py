@@ -64,23 +64,14 @@ def process_batch(batch_df, batch_id):
         if yesterday_date is None:
             yesterday_date = today_date
             predict_df = pd.read_csv("/opt/bitnami/spark/scripts/data/start_time_series.csv", parse_dates=["date"]).iloc[-context_length:]
-            print("0 - Loading dataframe for prediction")
-            print(predict_df)
             predict_df = predict_df.drop(columns=["date"])
 
             return
         elif yesterday_date != today_date:
-            print("🦄 - PREDICTING PROBLEMS")
-            print("Yesterday date", yesterday_date)
-            print("Today date", today_date)
-            print("Tomorrow date", tomorrow_date)
             ######
             # get the problems of yesterday
             yesterday_problems = daily_problems(yesterday_date)
-            print("1 - Yesterday problems\n", yesterday_problems)
             #######
-            print("2 - Inferring problems for tomorrow")
-            print(predict_df)
             # predict problems
             context_length = 8
             # access the second element of the tuple because is the prediction of tomorrow
@@ -90,15 +81,11 @@ def process_batch(batch_df, batch_id):
             # use of past_data and yesterday to predict tomorrow because we don't have all the data of today
             tomorrow_problems = predict_problems(predict_df)[1]
             #######
-            print("3- Tomorrow problems predict\n", tomorrow_problems)
             # send yesterday_problems to elasticsearch
-            print("4 - Sending problems to Elasticsearch")
             notify_problems(tomorrow_problems, tomorrow_date)
             # delete the predictions of yesterday
-            print("5 - Deleting predictions of yesterday")
             delete_predictions(yesterday_date)
             # update with the actual data
-            print("6 - Notifying actual problems of yesterday")
             notify_problems(yesterday_problems, yesterday_date)
             #######
             # update the dataframe for prediction
@@ -118,9 +105,3 @@ df.writeStream.foreachBatch(process_batch).start()
 
 es_stream.awaitTermination()
 # console_stream.awaitTermination()
-
-
-# 2024-06-09 11:33:29 +--------------+--------------+--------+--------------+-----------------+------------------+------------------+---------------------+------+-----------+-----------+------+------------+---------+--------+----------------+------------+----------------+
-# 2024-06-09 11:33:29 |Identificativo|CodiceIstituto|datetime|ModalitaArrivo|ResponsabileInvio|ProblemaPrincipale|DiagnosiPrincipale|PrestazionePrincipale|Triage|MeseNascita|AnnoNascita|Genere|Cittadinanza|Residenza|Diagnosi|EsitoTrattamento|prezzo_lordo|TipoTrasmissione|
-# 2024-06-09 11:33:29 +--------------+--------------+--------+--------------+-----------------+------------------+------------------+---------------------+------+-----------+-----------+------+------------+---------+--------+----------------+------------+----------------+
-# 2024-06-09 11:33:29 +--------------+--------------+--------+--------------+-----------------+------------------+------------------+---------------------+------+-----------+-----------+------+------------+---------+--------+----------------+------------+----------------+
