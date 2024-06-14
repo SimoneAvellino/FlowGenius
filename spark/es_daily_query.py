@@ -46,7 +46,6 @@ def delete_predictions(date):
     """
     Delete the predictions for the given date.
     """
-    print("Deleting predictions for date", date)
     client = Elasticsearch("http://elasticsearch:9200")
 
     # date is in a datetime.date format
@@ -67,16 +66,14 @@ def delete_predictions(date):
             }
         }
     }
-    print("Query", query)
 
     # Esegui la cancellazione dei documenti che corrispondono alla query
-    response = client.delete_by_query(index="emur_predictions", body=query)
-    print("Response", response)
+    client.delete_by_query(index="emur_predictions", body=query)
+    
 def notify_problems(problems, date):
     """
     Send the data to Elasticsearch. (to the emur_predictions index)
     """
-    print("Notifying problems for date", date)
     client = Elasticsearch(
         "http://elasticsearch:9200"
     )
