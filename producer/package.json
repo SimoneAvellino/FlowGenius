@@ -1,0 +1,21 @@
+{
+  "name": "kafka_producer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.6.8",
+    "body-parser": "^1.20.2",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "kafkajs": "^2.2.4",
+    "luxon": "^3.4.4",
+    "xml2js": "^0.6.2"
+  }
+}

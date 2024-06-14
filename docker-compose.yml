@@ -1,0 +1,123 @@
+services:
+
+  # Simulation of the producer
+  policlinico_catania:
+    container_name: policlinico_catania
+    hostname: policlinico_catania
+    build:
+      context: .
+      dockerfile: ./producer/Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./producer:/usr/app
+    depends_on:
+      - fluentd
+    environment:
+      - PORT=3000
+      - EMUR_FLOW_YEAR=2023
+      - EMUR_FLOW_FILE_TYPE=xml
+      - FLUENTD_HOST=fluentd
+      - FLUENTD_PORT=9880
+      - FLOW_TYPE=emur
+
+  # data ingestion
+  fluentd:
+    container_name: fluentd
+    hostname: fluentd
+    build:
+      context: .
+      dockerfile: ./fluent/Dockerfile
+    ports:
+      - "9880:9880"
+      - "24224:24224"
+    depends_on:
+      - kafka
+
+  zookeeper:
+    container_name: zookeeper
+    hostname: zookeeper
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+  kafka:
+    container_name: kafka
+    hostname: kafka
+    image: wurstmeister/kafka:latest
+    depends_on:
+      - zookeeper
+    ports:
+      - 9092:9092
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CREATE_TOPICS: "emur:1:1"
+
+
+  spark:
+    container_name: spark
+    hostname: spark
+    build:
+      context: .
+      dockerfile: ./spark/Dockerfile
+    ports:
+      - "4040:4040"
+    environment:
+      - SPARK_MODE=master
+      - SPARK_MASTER_HOST=spark
+      - SPARK_MASTER_PORT=7077
+    volumes:
+      - spark_ivy_cache:/tmp
+    command: >
+      spark-submit --conf spark.driver.extraJavaOptions="-Divy.cache.dir=/tmp -Divy.home=/tmp" --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,org.elasticsearch:elasticsearch-spark-30_2.12:8.13.4  /opt/bitnami/spark/scripts/main.py
+    depends_on:
+      - kafka
+      - elasticsearch
+
+  elasticsearch:
+    hostname: elasticsearch
+    container_name: elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    ports:
+        - 9200:9200
+    mem_limit: 1 GB
+
+  kibana:
+    hostname: kibana
+    container_name: kibana
+    image: docker.elastic.co/kibana/kibana:8.13.4
+    ports:
+      - 5601:5601
+
+volumes:
+  spark_ivy_cache:
+
+  # only for testing and debugging
+#  kafka_consumer:
+#    container_name: kafka_consumer
+#    hostname: kafka_consumer
+#    build:
+#      context: .
+#      dockerfile: ./kafka_consumer/Dockerfile
+#    depends_on:
+#      - kafka
+
+
+#  kafka-ui:
+#     image: provectuslabs/kafka-ui:latest
+#     ports:
+#       - "8080:8080"
+#     depends_on:
+#       - kafka
+#     environment:
+#       - KAFKA_CLUSTERS_0_NAME=local
+#       - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=PLAINTEXT://kafka:9092
